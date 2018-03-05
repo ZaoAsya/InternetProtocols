@@ -1,0 +1,414 @@
+8. Заостровская Анастасия
+
+Настройка интерфейсов на R2AR0:
+
+Router(config)#int fa0/0
+Router(config-if)#ip address 10.2.2.2 255.255.255.0
+Router(config-if)#no shutdown
+Router(config-if)#exit
+Router(config)#int serial2/0
+Router(config-if)#ip address 10.3.3.1 255.255.255.0
+Router(config-if)#no shutdown
+Router(config-if)#exit
+Router(config)#int loopback 0
+Router(config-if)#ip address 10.18.0.1 255.255.255.255
+Router(config-if)#exit
+Router(config)#int loopback 1
+Router(config-if)#ip address 10.18.1.1 255.255.255.255
+Router(config-if)#exit
+Router(config)#int loopback 2
+Router(config-if)#ip address 10.18.2.1 255.255.255.255
+Router(config-if)#exit
+Router(config)#int loopback 3
+Router(config-if)#ip address 10.18.3.1 255.255.255.255
+
+Настройка интерфейсов на R1AR0:
+
+Router(config)#int fa0/0
+Router(config-if)#ip address 10.2.2.1 255.255.255.0
+Router(config-if)#no shutdown
+Router(config-if)#exit
+Router(config)#int serial2/0
+Router(config-if)#ip address 10.1.1.1 255.255.255.0
+Router(config-if)#no shutdown
+
+Настройка интерфейсов на AВR:
+
+Router(config)#int serial2/0
+Router(config-if)#ip address 10.1.1.2 255.255.255.0
+Router(config-if)#no shutdown
+Router(config-if)#ex
+Router(config)#int serial3/0
+Router(config-if)#ip address 192.168.1.1 255.255.255.0
+Router(config-if)#no shutdown
+
+Настройка OSPF на R1AR0:
+
+Router(config)#router ospf 1
+Router(config-router)#router-id 1.1.1.1	
+Router(config-router)#network 10.1.1.0 0.0.0.255 area 0
+Router(config-router)#network 10.2.2.0 0.0.0.255 area 0
+
+Настройка OSPF на R2AR0:
+
+Router(config)#router ospf 1
+Router(config-router)#router-id 2.2.2.2
+Router(config-router)#network 10.2.2.0 0.0.0.255 area 0
+Router(config-router)#network 10.18.0.0 0.0.255.255 area 0
+
+
+**Почему для R2AR0 сеть для loopback интерфейсов задана в таком виде?
+**Общий префикс 10.18.0.0/16
+
+
+Настройка OSPF на AВR:
+
+Router(config)#router ospf 1
+Router(config-router)#router-id 1.1.2.2
+Router(config-router)#network 10.0.0.0 0.255.255.255 area 0
+
+
+Таблица маршрутизации на R1AR0:
+
+Router#sh ip route
+Codes: C - connected, S - static, I - IGRP, R - RIP, M - mobile, B - BGP
+       D - EIGRP, EX - EIGRP external, O - OSPF, IA - OSPF inter area
+       N1 - OSPF NSSA external type 1, N2 - OSPF NSSA external type 2
+       E1 - OSPF external type 1, E2 - OSPF external type 2, E - EGP
+       i - IS-IS, L1 - IS-IS level-1, L2 - IS-IS level-2, ia - IS-IS inter area
+       * - candidate default, U - per-user static route, o - ODR
+       P - periodic downloaded static route
+
+Gateway of last resort is not set
+
+     10.0.0.0/8 is variably subnetted, 6 subnets, 2 masks
+C       10.1.1.0/24 is directly connected, Serial2/0
+C       10.2.2.0/24 is directly connected, FastEthernet0/0
+O       10.18.0.1/32 [110/2] via 10.2.2.2, 00:05:47, FastEthernet0/0
+O       10.18.1.1/32 [110/2] via 10.2.2.2, 00:05:47, FastEthernet0/0
+O       10.18.2.1/32 [110/2] via 10.2.2.2, 00:05:47, FastEthernet0/0
+O       10.18.3.1/32 [110/2] via 10.2.2.2, 00:05:47, FastEthernet0/0
+
+
+**Как интерпретировать «10.0.0.0/8 is variably subnetted, 6 subnets, 2 masks»?
+***Сетей, у которых ip начинается на 10.0.0.0/8 6 штук, при этом эти 6 разбиты на 2
+части (двумя разными масками)
+
+
+Информация о Router LSA, хранящихся на R1AR0:
+
+Router#show ip ospf database router
+
+            OSPF Router with ID (1.1.1.1) (Process ID 1)
+
+                Router Link States (Area 0)
+
+  LS age: 713
+  Options: (No TOS-capability, DC)
+  LS Type: Router Links
+  Link State ID: 2.2.2.2
+  Advertising Router: 2.2.2.2
+  LS Seq Number: 80000008
+  Checksum: 0x2639
+  Length: 84
+  Number of Links: 5
+
+    Link connected to: a Transit Network
+     (Link ID) Designated Router address: 10.2.2.2
+     (Link Data) Router Interface address: 10.2.2.2
+      Number of TOS metrics: 0
+       TOS 0 Metrics: 1
+
+    Link connected to: a Stub Network
+     (Link ID) Network/subnet number: 10.18.0.1
+     (Link Data) Network Mask: 255.255.255.255
+      Number of TOS metrics: 0
+       TOS 0 Metrics: 1
+
+    Link connected to: a Stub Network
+     (Link ID) Network/subnet number: 10.18.1.1
+     (Link Data) Network Mask: 255.255.255.255
+      Number of TOS metrics: 0
+       TOS 0 Metrics: 1
+
+    Link connected to: a Stub Network
+     (Link ID) Network/subnet number: 10.18.2.1
+     (Link Data) Network Mask: 255.255.255.255
+      Number of TOS metrics: 0
+       TOS 0 Metrics: 1
+
+    Link connected to: a Stub Network
+     (Link ID) Network/subnet number: 10.18.3.1
+     (Link Data) Network Mask: 255.255.255.255
+      Number of TOS metrics: 0
+       TOS 0 Metrics: 1
+
+  LS age: 704
+  Options: (No TOS-capability, DC)
+  LS Type: Router Links
+  Link State ID: 1.1.1.1
+  Advertising Router: 1.1.1.1
+  LS Seq Number: 8000000a
+  Checksum: 0xbfa7
+  Length: 60
+  Number of Links: 3
+
+    Link connected to: a Transit Network
+     (Link ID) Designated Router address: 10.2.2.2
+     (Link Data) Router Interface address: 10.2.2.1
+      Number of TOS metrics: 0
+       TOS 0 Metrics: 1
+
+    Link connected to: another Router (point-to-point)
+     (Link ID) Neighboring Router ID: 1.1.2.2
+     (Link Data) Router Interface address: 10.1.1.1
+      Number of TOS metrics: 0
+       TOS 0 Metrics: 64
+
+    Link connected to: a Stub Network
+     (Link ID) Network/subnet number: 10.1.1.0
+     (Link Data) Network Mask: 255.255.255.0
+      Number of TOS metrics: 0
+       TOS 0 Metrics: 64
+
+  LS age: 704
+  Options: (No TOS-capability, DC)
+  LS Type: Router Links
+  Link State ID: 1.1.2.2
+  Advertising Router: 1.1.2.2
+  LS Seq Number: 80000005
+  Checksum: 0x7d1b
+  Length: 48
+  Number of Links: 2
+
+    Link connected to: another Router (point-to-point)
+     (Link ID) Neighboring Router ID: 1.1.1.1
+     (Link Data) Router Interface address: 10.1.1.2
+      Number of TOS metrics: 0
+       TOS 0 Metrics: 64
+
+    Link connected to: a Stub Network
+     (Link ID) Network/subnet number: 10.1.1.0
+     (Link Data) Network Mask: 255.255.255.0
+      Number of TOS metrics: 0
+       TOS 0 Metrics: 64
+
+
+**1. Какой тип этого LSA?
+***Router LSA
+
+**2. Сколько Router LSA хранится на R1AR0? Почему именно столько? А сколько
+Router LSA хранится на других маршрутизаторах этой области?
+***На R1AR0 3 LSA. По одному LSA на каждый маршрутизатор в области. То есть, на
+остальных маршрутизаторах этой области тоже по 3 LSA.
+
+**3. Кто генерирует Router LSA? Какую информацию содержат Router LSA? В каких пределах
+распространяются маршрутизаторами Router LSA (в пределах сети, области, автономной
+системы и т. п.)?
+***Маршрутизатор генерирует Router LSA для каждой области, к которой он относится.
+Соответственно, распространяется он в пределах одной области. LSA описывает состояния
+каналов маршрутизатора в область. Маршрутизатор также показывает свою принадлежность к
+граничным маршрутизаторам области или AS.
+Можно узнать, кто главный роутер (Designated Router address: 10.2.2.2),
+тип области, к которой есть доступ (Link connected to: a Stub Network),
+с какого роутера пришла информация (Advertising Router: 1.1.1.1)
+
+
+Настройка R1AR1:
+
+Router(config)#int serial2/0
+Router(config-if)#ip address 192.168.1.2 255.255.255.0
+Router(config-if)#no shutdown
+Router(config-if)#ex
+Router(config)#int serial3/0
+Router(config-if)#ip address 192.168.2.1 255.255.255.0
+Router(config-if)#no shutdown
+Router(config-if)#ex
+Router(config)#router ospf 1
+Router(config-router)#router-id 3.3.3.3
+Router(config-router)#network 192.168.0.0 0.0.255.255 area 1
+
+Настройка ASBR:
+
+Router(config)#int serial2/0
+Router(config-if)#ip address 192.168.2.2 255.255.255.0
+Router(config-if)#no shutdown
+Router(config)#router ospf 1
+Router(config-router)#router-id 4.4.4.4
+Router(config-router)#network 192.168.2.0 0.0.0.255 area 1
+Router(config-router)#ex
+
+Настройка ABR:
+
+Router(config)#route ospf 1
+Router(config-router)#network 192.168.1.0 0.0.0.255 area 1
+Router(config-router)#ex
+
+Tаблицa маршрутизации на R1AR0:
+
+Router#show ip route
+Codes: C - connected, S - static, I - IGRP, R - RIP, M - mobile, B - BGP
+       D - EIGRP, EX - EIGRP external, O - OSPF, IA - OSPF inter area
+       N1 - OSPF NSSA external type 1, N2 - OSPF NSSA external type 2
+       E1 - OSPF external type 1, E2 - OSPF external type 2, E - EGP
+       i - IS-IS, L1 - IS-IS level-1, L2 - IS-IS level-2, ia - IS-IS inter area
+       * - candidate default, U - per-user static route, o - ODR
+       P - periodic downloaded static route
+
+Gateway of last resort is not set
+
+     10.0.0.0/8 is variably subnetted, 6 subnets, 2 masks
+C       10.1.1.0/24 is directly connected, Serial2/0
+C       10.2.2.0/24 is directly connected, FastEthernet0/0
+O       10.18.0.1/32 [110/2] via 10.2.2.2, 01:04:27, FastEthernet0/0
+O       10.18.1.1/32 [110/2] via 10.2.2.2, 01:04:27, FastEthernet0/0
+O       10.18.2.1/32 [110/2] via 10.2.2.2, 01:04:27, FastEthernet0/0
+O       10.18.3.1/32 [110/2] via 10.2.2.2, 01:04:27, FastEthernet0/0
+O IA 192.168.1.0/24 [110/128] via 10.1.1.2, 00:05:54, Serial2/0
+
+**1. В таблице маршрутизации появились маршруты помеченные кодом «O IA». Что означает
+этот код?
+***Маршруты OSPF из других областей.
+
+**2. Сколько сетей передается из Area 1 в Area 0? Какие? Сколько Summary LSA хранится на
+R1AR0?
+***Из Area 1 в Area 0 передается одна сеть (столько же и Summary LSA).
+
+**3. Кто и каким образом генерирует Summary LSA? Какую информацию содержат Summary
+LSA?
+***Его формирует только ABR и рассылает во все зоны. Представляет сети из другой
+области "подключенными к нему" (области не нужны подробности топологии другой области,
+ведь вход в другие области через граничный роутер (ABR))
+
+
+Я случайно просмотрела шаг4...
+На данном этапе на R1AR0 дела обстоят так:
+
+Router#show ip ospf database network
+
+            OSPF Router with ID (1.1.1.1) (Process ID 1)
+
+                Net Link States (Area 0)
+
+  Routing Bit Set on this LSA
+  LS age: 1017
+  Options: (No TOS-capability, DC)
+  LS Type: Network Links
+  Link State ID: 10.2.2.2  (address of Designated Router)
+  Advertising Router: 2.2.2.2
+  LS Seq Number: 80000003
+  Checksum: 0x327e
+  Length: 32
+  Network Mask: /24
+        Attached Router: 1.1.1.1
+        Attached Router: 2.2.2.2
+
+**1. Какой тип этого LSA?
+*** Network LSA
+
+**2. Сколько Network LSA хранится на хранится на R1AR0? Почему именно столько? А
+сколько Network LSA хранится на других маршрутизаторах этой области?
+***На каждом роутере области хранится 1 Network LSA. Он содержит у всех одинаковую
+информацию, т.к генерирует ее DR, который в области один.
+
+**3. Что такое Designated Router? Зачем он нужен?
+***Выделенный маршрутизатор в области для предотвращения множественной рассылки
+копий в сетевых сегментах. Синхронизацию другие роутеры выполняют только с ним.
+DR-роутер генерирует тот самый единственный Network LSA. Приоритет в выборе у того,
+у кого Router-ID больше.
+
+**4. Кто генерирует Network LSA? Какую информацию содержат Network LSA? В каких пре-
+делах распространяются маршрутизаторами Network LSA?
+***Network LSA генерирует DR. Здесь содержится информация о том, какие маршрутизаторы
+подключены к DR и за какими они интерфейсами. Рассылаются внутри области.
+
+
+Настройка R2AR0:
+
+Router(config)#int serial3/0
+Router(config-if)#ip address 10.3.4.1 255.255.255.0
+Router(config-if)#no shutdown
+
+Router(config)#router rip
+Router(config-router)#network 10.0.0.0
+Router(config-router)#ex
+
+Router(config)#router ospf 1
+Router(config-router)#redistribute rip subnets
+Router(config-router)#ex
+
+
+Настройка RTRRIP:
+
+Router(config)#int serial3/0
+Router(config-if)#ip address 10.3.4.2 255.255.255.0
+Router(config-if)#no shutdown
+
+Router(config)#int loopback 0
+Router(config-if)#ip address 172.20.0.1 255.255.255.0
+Router(config)#int loopback 1
+Router(config-if)#ip address 172.20.1.1 255.255.255.0
+Router(config-if)#ex
+Router(config)#int loopback 2
+Router(config-if)#ip address 172.20.2.1 255.255.255.0
+
+Router(config)#router rip
+Router(config-router)#network 10.0.0.0
+Router(config-router)#network 172.20.0.0
+Router(config-router)#ex
+
+
+R1AR0:
+
+Router#sh ip route
+
+Codes: C - connected, S - static, I - IGRP, R - RIP, M - mobile, B - BGP
+       D - EIGRP, EX - EIGRP external, O - OSPF, IA - OSPF inter area
+       N1 - OSPF NSSA external type 1, N2 - OSPF NSSA external type 2
+       E1 - OSPF external type 1, E2 - OSPF external type 2, E - EGP
+       i - IS-IS, L1 - IS-IS level-1, L2 - IS-IS level-2, ia - IS-IS inter area
+       * - candidate default, U - per-user static route, o - ODR
+       P - periodic downloaded static route
+
+Gateway of last resort is not set
+
+     10.0.0.0/8 is variably subnetted, 7 subnets, 2 masks
+C       10.1.1.0/24 is directly connected, Serial2/0
+C       10.2.2.0/24 is directly connected, FastEthernet0/0
+O E2    10.3.4.0/24 [110/20] via 10.2.2.2, 00:01:54, FastEthernet0/0
+O       10.18.0.1/32 [110/2] via 10.2.2.2, 02:08:54, FastEthernet0/0
+O       10.18.1.1/32 [110/2] via 10.2.2.2, 02:08:54, FastEthernet0/0
+O       10.18.2.1/32 [110/2] via 10.2.2.2, 02:08:54, FastEthernet0/0
+O       10.18.3.1/32 [110/2] via 10.2.2.2, 02:08:54, FastEthernet0/0
+O E2 172.20.0.0/16 [110/20] via 10.2.2.2, 00:01:54, FastEthernet0/0
+O IA 192.168.1.0/24 [110/128] via 10.1.1.2, 01:10:21, Serial2/0
+
+
+**1. В таблице маршрутизации появились записи с кодом «O E2».Что они означают?
+***Внешние маршруты, которые переданы в OSPF.
+
+**2. Объяснить смысл данных выводимых командой show ip ospf database external.
+***Говорит, через кого пришли внешние маршруты (Advertising Router: 2.2.2.2),
+какие сети маршрутизируются (Link State ID: 172.20.0.0 (External Network Number))
+
+**3. Кто и каким образом генерирует External LSA? Какую информацию содержат External
+LSA?
+***Генерирует ASBR. Представляет с их помощью внешние маршруты, которые он передает
+в OSPF. Рассылает по всем областям.
+
+Делаем область 1 тупиковой:
+R1AR1, ABR, ASBR:
+
+Router(config)#router ospf 1
+Router(config-router)#area 1 stub
+Router(config-router)#ex
+
+
+**1. Что такое тупиковая область? Для чего нужна?
+***Тупиковая область предназначена для снижения трафика обновлений. Для всех
+роутеров в тупиковой области весь внешний мир (не OSPF) за ABR.
+
+**2. Как отразилось на таблице маршрутизации и содержимом топологической базы маршру-
+тизаторов ABR и R1AR1 то, что область стала тупиковой?
+***все внешние маршруты пропали, а вместо них появился маршрут по умолчанию.
+При этом внутренние OSPF маршруты из других областей передаются, как обычно.
