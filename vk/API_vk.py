@@ -51,7 +51,7 @@ def get_friends():
         return 'no' if on == 0 else 'yes'
 
     def get_sex(sex):
-        return 'Female' if sex else 'Male'
+        return 'Female' if sex == 1 else 'Male'
 
     data = make_request('friends.get', '5.62', {'user_id': PERSON, 'fields': 'online,sex'})
     title("Friends")
