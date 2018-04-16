@@ -1,6 +1,7 @@
 import pickle
 import socket
 import time
+# by Zaostrovskaya Anastasiya
 import os
 import sys
 from DNSPacket import *
@@ -20,10 +21,12 @@ def build_cache():
     global CACHE
     file = 'cache_data.pkl'
     if os.access(file, os.F_OK):
+        print("Start with NOT empty Cache")
         input = open(file, 'rb')
         CACHE = pickle.load(input)
         input.close()
     else:
+        print("Start with empty Cache")
         CACHE = dict()
 
 
@@ -119,19 +122,26 @@ class DNSServer():
 
 
 def main(arg_server):
-    build_cache()
-    client_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
     try:
+        client_socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        client_socket.settimeout(1/60)
         server = arg_server
         if arg_server == "127.0.0.1":
             server = "8.8.8.8"
-        client_socket.bind(('127.0.0.1', 53))
+        client_socket.bind(('127.0.0.2', 53))
         print("Start dns-server listening {0} port with {1} server".format(53, server))
+        build_cache()
         print("Waiting for request...")
+    except OSError as ex:
+        print(ex)
+        sys.exit()
+    try:
         while True:
-            data, addr = client_socket.recvfrom(1024)
+            try:
+                data, addr = client_socket.recvfrom(1024)
+            except socket.timeout:
+                continue
             DNSServer(data, addr, server, client_socket).start()
-            save_cache()
     except KeyboardInterrupt:
         client_socket.close()
         save_cache()
@@ -145,8 +155,7 @@ def main(arg_server):
 
 if __name__ == "__main__":
     try:
-        main("212.193.163.6")
-        # main(sys.argv[1])
+        main(sys.argv[1])
     except IndexError:
         print("Enter the main server")
         sys.exit(0)
