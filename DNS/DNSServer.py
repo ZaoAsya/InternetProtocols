@@ -1,6 +1,5 @@
 import pickle
 import socket
-import threading
 import time
 import os
 import sys
@@ -76,9 +75,9 @@ class CacheUnit:
             return False
         return self.rr == other.rr
 
-class DNSServer(threading.Thread):
+
+class DNSServer():
     def __init__(self, data: DNSPacket, addr, server, sock):
-        threading.Thread.__init__(self)
         self.client = addr
         self.port = 53
         self.data = data
@@ -133,7 +132,7 @@ def main(arg_server):
             data, addr = client_socket.recvfrom(1024)
             DNSServer(data, addr, server, client_socket).start()
             save_cache()
-    except KeyboardInterrupt:  # не реагирует
+    except KeyboardInterrupt:
         client_socket.close()
         save_cache()
         print("\nDNS server was stopped\nCache was saved")
