@@ -46,7 +46,6 @@ def add_records_to_cache(packet: DNSPacket):
     get_answers(packet.answer)
     get_answers(packet.additional)
     get_answers(packet.authority)
-    print("CACHE "+str(CACHE))
 
 
 def get_from_cache(key, packet: DNSPacket):
@@ -133,6 +132,7 @@ def main(arg_server):
         while True:
             data, addr = client_socket.recvfrom(1024)
             DNSServer(data, addr, server, client_socket).start()
+            save_cache()
     except KeyboardInterrupt:  # не реагирует
         client_socket.close()
         save_cache()
@@ -146,8 +146,8 @@ def main(arg_server):
 
 if __name__ == "__main__":
     try:
-        # main("212.193.163.6")
-        main(sys.argv[1])
+        main("212.193.163.6")
+        # main(sys.argv[1])
     except IndexError:
         print("Enter the main server")
         sys.exit(0)

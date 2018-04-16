@@ -33,7 +33,7 @@ class Header:
                  recursion_available=0, reply_code=0, questions=0, answer_rrs=0, authority_rrs=0, additional_rrs=0):
         self.id = id  # Идентификация
         self.qr = qr  # Тип сообщения: 0 - запрос, 1 - ответ
-        self.opcode = opcode  # Код операции: 0 - стандарт, 1 - инверсныйБ 2 - статус сервера
+        self.opcode = opcode  # Код операции: 0 - стандарт, 1 - инверсный, 2 - статус сервера
         self.aa = authoritative  # Авторитетный ответ
         self.tc = truncated  # Обрезано
         self.rd = recursion_desired  # Требуется рукурсия
