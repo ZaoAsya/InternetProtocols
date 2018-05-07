@@ -38,7 +38,9 @@ def timeout(sock, command):
 def get_letter(text_file):
     """Текстовое содержимое письма"""
     with open(text_file, 'r') as f:
-        return f.read()
+        file = f.read()
+        file = file.replace('\n.', '\n..')
+    return file
 
 
 def parse_message_directory(dir):
