@@ -10,10 +10,10 @@ import binascii
 
 def get_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument("server", type=str, help="Сервер для получения почты")
-    parser.add_argument("login", type=str, help="Логин для авторизации")
-    parser.add_argument("password", type=str, help="Пароль для авторизации")
-    parser.add_argument("number", type=int, help="Номер письма для просмотра")
+    parser.add_argument("--server", "-s", type=str, help="Сервер для получения почты")
+    parser.add_argument("--login", "-l", type=str, help="Логин для авторизации")
+    parser.add_argument("--password", "-p", type=str, help="Пароль для авторизации")
+    parser.add_argument("--number", "-n", type=int, help="Номер письма для просмотра")
     return parser.parse_args()
 
 
@@ -45,11 +45,11 @@ def parse_message(num, message, amount):
         return name, email
 
     def parse_subject():
-        s = re.compile(r"(Subject: |\t)=\?utf-8\?B\?(.*?)\?=", re.IGNORECASE)
+        s = re.compile(r"(Subject: |)(=\?UTF-8\?B\?(\S+)\?=)", re.IGNORECASE)
         find = s.findall(message)
         result = ""
-        for part in find:
-            result += part[1]
+        for part in find[1:]:
+            result += part[2]
         subject = base64.b64decode(result).decode()
         return subject
 
