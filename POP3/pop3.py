@@ -13,6 +13,7 @@ ENCODING = 'B'
 
 
 def get_args():
+    """Получение аргументов при запуск"""
     parser = argparse.ArgumentParser()
     parser.add_argument("--server", "-s", type=str, help="Сервер для получения почты")
     parser.add_argument("--login", "-l", type=str, help="Логин для авторизации")
@@ -22,6 +23,7 @@ def get_args():
 
 
 def decode_header(line):
+    """Декодирование частей заголовка"""
     if line:
         try:
             if line[0] != "=":
@@ -35,8 +37,10 @@ def decode_header(line):
 
 
 def parse_message(num, message, amount):
+    """Разбор пришедшего сообщения"""
 
     def parse_from_to(reg1, reg2):
+        """Разбор имени и адреса"""
         reg_to = re.compile(reg1)
         try:
             try:
@@ -55,11 +59,12 @@ def parse_message(num, message, amount):
         return name, email
 
     def parse_subject():
+        """Разбор темы сообщения"""
         s = re.compile(r"(Subject: |)(=\?UTF-8\?([BQ])\?(\S+)\?=)", re.IGNORECASE)
         find = s.findall(message)
-        result = ""
         global ENCODING
         ENCODING = find[1][2]
+        result = ""
         for part in find[1:]:
             result += part[3]
         if ENCODING == 'B':
@@ -77,6 +82,7 @@ def parse_message(num, message, amount):
         return date
 
     def parse_text(boundary):
+        """Запись текста письма в файл"""
         re_name = re.compile(r'Content-Type: text\/plain;')
         if boundary:
             mes_parts = message.split(boundary)
@@ -98,6 +104,7 @@ def parse_message(num, message, amount):
         return
 
     def parse_boundary():
+        """Поиск разделителя"""
         reg = re.compile(r'boundary="(.+)"')
         try:
             boundary = reg.findall(message)[1]
@@ -106,6 +113,7 @@ def parse_message(num, message, amount):
         return boundary
 
     def parse_file(boundary, files):
+        """Запись файлов-вложений"""
         re_name = re.compile(r'attachment; filename="(.*)"')
         mes_parts = message.split(boundary)
         for part in mes_parts:
@@ -136,21 +144,22 @@ def parse_message(num, message, amount):
     if boundary:
         files = {file[10:-1]: decode_header(file[10:]) for file in reg_filename.findall(message)}
     print("ПИСЬМО №{}".format(num))
-    print("  От кого:", from_name, from_email)
-    print("  Кому: ", to_name, to_email)
-    print("  Тема:", subject)
+    print("  От кого: {} {}".format(from_name, from_email))
+    print("  Кому: {} {}".format(to_name, to_email))
+    print("  Тема: {}".format(subject))
     if date:
-        print("  Дата:", date)
-    print("  Размер:", amount)
+        print("  Дата: {}".format(date))
+    print("  Размер: {}".format(amount))
     if files:
         parse_file(boundary, files)
-        print("  Вложений:", len(files))
+        print("  Вложений: {}".format(len(files)))
         print("  Имена вложений:")
         for f in files:
             print("   ", files[f])
 
 
 def problems(sock, cmd, data=''):
+    """Вывод ошибок"""
     print(cmd + " problems")
     print(data)
     sock.close()
@@ -166,6 +175,7 @@ class Mail:
         self.number = number
 
     def connect(self):
+        """Создание соединения"""
         try:
             sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             self.ssl_sock = ssl.wrap_socket(sock)
@@ -182,6 +192,7 @@ class Mail:
             problems(self.ssl_sock, "CONNECTION timeout")
 
     def auth(self):
+        """Авторизация на почте"""
         login = "USER " + self.login + "\r\n"
         password = "PASS " + self.password + "\r\n"
         try:
@@ -201,6 +212,7 @@ class Mail:
             problems(self.ssl_sock, "AUTH timeout")
 
     def stat(self):
+        """Проверка количества писем в ящике и возможности скачать заданное письмо"""
         try:
             self.ssl_sock.send("STAT\r\n".encode())
             data = self.ssl_sock.recv(4096).decode()
@@ -214,7 +226,8 @@ class Mail:
         except socket.timeout:
             problems(self.ssl_sock, "STAT timeout")
 
-    def get_messages(self):
+    def get_message(self):
+        """Скачивание указанного сообщения"""
         try:
             self.ssl_sock.send("RETR {}\r\n".format(self.number).encode())
             data = self.ssl_sock.recv(1024).decode(errors="ignore")
@@ -232,6 +245,7 @@ class Mail:
             problems(self.ssl_sock, "GET MESSAGE")
 
     def quit(self):
+        """Закрытие сеанса"""
         try:
             self.ssl_sock.send("QUIT\r\n")
             print("QUIT")
@@ -241,10 +255,11 @@ class Mail:
             exit(0)
 
     def get_mail(self):
+        """Алгоритм получения письма"""
         self.connect()
         self.auth()
         self.stat()
-        self.get_messages()
+        self.get_message()
         self.quit()
 
 
