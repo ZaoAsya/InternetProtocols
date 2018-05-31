@@ -1,11 +1,15 @@
 import argparse
 import socket
 import ssl
+import quopri
 # by Zaostrovskaya Anastasiya
 import re
 import io
 import base64
 import binascii
+
+
+ENCODING = 'B'
 
 
 def get_args():
@@ -22,8 +26,10 @@ def decode_header(line):
         try:
             if line[0] != "=":
                 return line
-            else:
+            elif ENCODING == 'B':
                 return base64.b64decode(line[9:-2]).decode()
+            elif ENCODING == 'Q':
+                return quopri.decodestring(line[9:-2]).decode()
         except binascii.Error:
             return "Error decoding"
 
@@ -33,24 +39,33 @@ def parse_message(num, message, amount):
     def parse_from_to(reg1, reg2):
         reg_to = re.compile(reg1)
         try:
-            lst_to = reg_to.findall(message)[0].split()[1:]
-        except IndexError:
-            reg_to = re.compile(reg2)
-            lst_to = reg_to.findall(message)[0].split()[1:]
-        try:
-            name, email = lst_to
-        except ValueError:
-            name = ""
-            email = lst_to[0]
+            try:
+                lst_to = reg_to.findall(message)[0].split()[1:]
+            except IndexError:
+                reg_to = re.compile(reg2)
+                lst_to = reg_to.findall(message)[0].split()[1:]
+            try:
+                name, email = lst_to
+            except ValueError:
+                name = ""
+                email = lst_to[0]
+        except:
+            print("Error on parsing name or email")
+            exit(0)
         return name, email
 
     def parse_subject():
-        s = re.compile(r"(Subject: |)(=\?UTF-8\?B\?(\S+)\?=)", re.IGNORECASE)
+        s = re.compile(r"(Subject: |)(=\?UTF-8\?([BQ])\?(\S+)\?=)", re.IGNORECASE)
         find = s.findall(message)
         result = ""
+        global ENCODING
+        ENCODING = find[1][2]
         for part in find[1:]:
-            result += part[2]
-        subject = base64.b64decode(result).decode()
+            result += part[3]
+        if ENCODING == 'B':
+            subject = base64.b64decode(result).decode()
+        else:
+            subject = quopri.decodestring(result).decode()
         return subject
 
     def parse_date():
@@ -63,18 +78,31 @@ def parse_message(num, message, amount):
 
     def parse_text(boundary):
         re_name = re.compile(r'Content-Type: text\/plain;')
-        mes_parts = message.split(boundary)
-        for part in mes_parts:
-            name = re_name.findall(part)
-            if name:
-                text = part.split('\n')[4]
-                with open('text_plain.txt', 'w') as f:
-                    f.write(base64.b64decode(text).decode())
-                return
+        if boundary:
+            mes_parts = message.split(boundary)
+            for part in mes_parts:
+                name = re_name.findall(part)
+                if name:
+                    text = part.split('\n')[4]
+        else:
+            mes_parts = message.split('\r\n\r\n')
+            text = mes_parts[1][:-5]
+        with open('text_plain.txt', 'w') as f:
+            if ENCODING == 'B':
+                f.write(text)
+            else:
+                try:
+                    f.write(quopri.decodestring(text).decode())
+                except ValueError:
+                    f.write(text)
+        return
 
     def parse_boundary():
         reg = re.compile(r'boundary="(.+)"')
-        boundary = reg.findall(message)[1]
+        try:
+            boundary = reg.findall(message)[1]
+        except IndexError:
+            boundary = ''
         return boundary
 
     def parse_file(boundary, files):
@@ -88,20 +116,25 @@ def parse_message(num, message, amount):
                 for f in file:
                     res_file += f
                 with io.open(files[name[0]], "wb") as name:
-                    name.write(base64.decodestring(res_file.encode()))
+                    if ENCODING == 'B':
+                        name.write(base64.decodestring(res_file.encode()))
+                    else:
+                        name.write(quopri.encodestring(res_file.encode()))
 
     from_name, from_email = parse_from_to(r'From: [\S]*[\s]*<[\S]*>', r'From: [\S]*')
     to_name, to_email = parse_from_to(r'To: [\S]* <[\S]*>', r'To: [\S]*')
     date = parse_date()
     boundary = parse_boundary()
+    subject = parse_subject()
     parse_text(boundary)
     from_name = decode_header(from_name)
     to_name = decode_header(to_name)
     from_email = decode_header(from_email)
     to_email = decode_header(to_email)
-    subject = decode_header(parse_subject())
     reg_filename = re.compile(r"filename=[\S]+")
-    files = {file[10:-1]: decode_header(file[10:]) for file in reg_filename.findall(message)}
+    files = dict()
+    if boundary:
+        files = {file[10:-1]: decode_header(file[10:]) for file in reg_filename.findall(message)}
     print("ПИСЬМО №{}".format(num))
     print("  От кого:", from_name, from_email)
     print("  Кому: ", to_name, to_email)
@@ -133,16 +166,18 @@ class Mail:
         self.number = number
 
     def connect(self):
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.ssl_sock = ssl.wrap_socket(sock)
-        self.ssl_sock.settimeout(2)
         try:
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            self.ssl_sock = ssl.wrap_socket(sock)
+            self.ssl_sock.settimeout(2)
             self.ssl_sock.connect((self.server, self.port))
             data = self.ssl_sock.recv(4096).decode()
             if data[:3] == "+OK":
                 print("CONNECTION created")
             else:
                 problems(self.ssl_sock, "CONNECTION", data)
+        except socket.gaierror:
+            problems(self.ssl_sock, "CONNECTION")
         except socket.timeout:
             problems(self.ssl_sock, "CONNECTION timeout")
 
